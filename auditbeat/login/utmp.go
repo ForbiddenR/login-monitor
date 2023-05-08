@@ -390,9 +390,9 @@ func (r *UtmpFileReader) processGoodLoginRecord(utmp *Utmp) *LoginRecord {
 			Every other record type is ignored:
 			- EMPTY - empty record
 			- NEW_TIME and OLD_TIME - could be useful, but not written when time changes.
-			  at least using `date`
+			at least using `date`
 			- INIT_PROCESS and LOGIN_PROCESS - written on boot but do not contain any
-			  interesting infomation
+			interesting infomation
 			- ACCOUNTING - not implemented according to manpage
 		*/
 		r.log.Debugf("Ignoring UTMP record of type %v.", utmp.UtType)
