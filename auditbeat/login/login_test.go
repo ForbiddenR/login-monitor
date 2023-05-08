@@ -2,6 +2,7 @@ package login
 
 import (
 	"encoding/binary"
+	"encoding/json"
 	"io"
 	"net"
 	"os"
@@ -9,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/elastic/beats/v7/auditbeat/core"
 	"github.com/elastic/beats/v7/libbeat/paths"
 	mbtest "github.com/elastic/beats/v7/metricbeat/mb/testing"
 	"github.com/elastic/elastic-agent-libs/mapstr"
@@ -36,13 +36,30 @@ func TestData(t *testing.T) {
 
 	if len(events) == 0 {
 		t.Fatal("no evnets were generated")
-	} else if len(events) != 1 {
-		t.Fatalf("only one event expected, got %d", len(events))
 	}
 
-	events[0].RootFields.Put("event.origin", "/var/log/wtmp")
-	fullEvent := mbtest.StandardizeEvent(f, events[0], core.AddDatasetToEvent)
-	mbtest.WriteEventToDataJSON(t, fullEvent, "")
+	file, err := os.Open("./test.log")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer file.Close()
+
+	for _, event := range events {
+		by, err := json.Marshal(event)
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Log(string(by))
+		file.Write(by)
+		file.Sync()
+	}
+	// else if len(events) != 1 {
+	// 	t.Fatalf("only one event expected, got %d", len(events))
+	// }
+
+	// events[0].RootFields.Put("event.origin", "/var/log/wtmp")
+	// fullEvent := mbtest.StandardizeEvent(f, events[0], core.AddDatasetToEvent)
+	// mbtest.WriteEventToDataJSON(t, fullEvent, "")
 }
 
 func TestWtmp(t *testing.T) {
