@@ -40,12 +40,13 @@ const (
 	UT_HOSTSIZE = 256
 )
 
-// utmpC is a GO representation of the C utmp stuct that the UTMP files consist of.
+// utmpC is a Go representation of the C utmp struct that the UTMP files consist of.
 type utmpC struct {
 	Type UtType
 
 	// Alignment
-	_        [2]byte
+	_ [2]byte
+
 	Pid      int32
 	Device   [UT_LINESIZE]byte
 	Terminal [4]byte
@@ -55,7 +56,7 @@ type utmpC struct {
 	ExitStatusTermination int16
 	ExitStatusExit        int16
 
-	SessionID int
+	SessionID int32
 
 	TimeSeconds      int32
 	TimeMicroseconds int32

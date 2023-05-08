@@ -1,0 +1,30 @@
+{
+    "@timestamp": "2017-10-12T08:05:34.853Z",
+    "event": {
+        "action": "user_login",
+        "kind": "event",
+        "origin": "./testdata/wtmp"
+    },
+    "message": "Login by user vagrant (UID: -1) on pts/2 (PID: 14962) from 10.0.2.2 (IP: 10.0.2.2)",
+    "process": {
+        "pid": 14962
+    },
+    "related": {
+        "ip": [
+            "10.0.2.2"
+        ],
+        "user": [
+            "vagrant"
+        ]
+    },
+    "service": {
+        "type": "system"
+    },
+    "source": {
+        "ip": "10.0.2.2"
+    },
+    "user": {
+        "name": "vagrant",
+        "terminal": "pts/2"
+    }
+}
