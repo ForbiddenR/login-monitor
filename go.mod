@@ -1,4 +1,4 @@
-module github.com/GRTheory/login-monitor
+module github.com/ForbiddenR/login-monitor
 
 go 1.20
 
