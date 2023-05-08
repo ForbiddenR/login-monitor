@@ -24,7 +24,7 @@ func TestData(t *testing.T) {
 	defer SetupDataDir(t)()
 
 	config := getBaseConfig()
-	config["login.wtmp_file_pattern"] = "./testdata/wtmp"
+	config["login.wtmp_file_pattern"] = "./testdata/wtmp2"
 	config["login.btmp_file_pattern"] = ""
 	f := mbtest.NewReportingMetricSetV2(t, config)
 	defer f.(*MetricSet).utmpReader.bucket.DeleteBucket()
@@ -38,20 +38,12 @@ func TestData(t *testing.T) {
 		t.Fatal("no evnets were generated")
 	}
 
-	file, err := os.Open("./test.log")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer file.Close()
-
 	for _, event := range events {
-		by, err := json.Marshal(event)
+		by, err := json.Marshal(event.RootFields)
 		if err != nil {
 			t.Fatal(err)
 		}
 		t.Log(string(by))
-		file.Write(by)
-		file.Sync()
 	}
 	// else if len(events) != 1 {
 	// 	t.Fatalf("only one event expected, got %d", len(events))
@@ -177,6 +169,44 @@ func TestWtmp(t *testing.T) {
 	checkFieldValue(t, mapstr.M(events[0].RootFields), "user.terminal", "pts/2")
 	assert.True(t, events[0].Timestamp.Equal(time.Date(2019, 1, 24, 9, 51, 51, 367964000, time.UTC)),
 		"Timestamp is not equal: %+v", events[0].Timestamp)
+}
+
+func TestBtmp(t *testing.T) {
+	if byteOrder != binary.LittleEndian{
+		t.Skip("Test only works on little-endian systems - skipping.")
+	}
+
+	defer SetupDataDir(t)()
+
+	config := getBaseConfig()
+	config["login.wtmp_file_pattern"] = ""
+	config["login.btmp_file_pattern"] = "/var/log/btmp"
+	f := mbtest.NewReportingMetricSetV2(t, config)
+	defer f.(*MetricSet).utmpReader.bucket.DeleteBucket()
+
+	events, errs := mbtest.ReportingFetchV2(f)
+	if len(errs) > 0 {
+		t.Fatalf("received error: %+v", errs[0])
+	}
+
+	if len(events) == 0 {
+		t.Fatal("no events were generated")
+	}
+	// else if len(events) != 4 {
+	// 	t.Fatalf("expected 4 events, got %d", len(events))
+	// }
+	i := 0
+	for _, event := range events {
+		by, err := json.Marshal(event.RootFields)
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Log(string(by), event.Timestamp)
+		if i == 20 {
+			break
+		}
+		// i++
+	}
 }
 
 func checkFieldValue(t *testing.T, mapstr mapstr.M, fieldName string, fieldValue interface{}) {
