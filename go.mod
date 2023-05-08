@@ -4,6 +4,7 @@ go 1.20
 
 require (
 	github.com/elastic/beats/v7 v7.17.10
+	github.com/fsnotify/fsnotify v1.6.0
 	github.com/joho/godotenv v1.5.1
 	github.com/spf13/cobra v1.7.0
 )
@@ -20,7 +21,6 @@ require (
 	github.com/elastic/go-ucfg v0.8.6 // indirect
 	github.com/elastic/go-windows v1.0.1 // indirect
 	github.com/fatih/color v1.13.0 // indirect
-	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/gofrs/uuid v4.2.0+incompatible // indirect
 	github.com/golang/mock v1.6.0 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
