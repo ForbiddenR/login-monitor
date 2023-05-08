@@ -3,16 +3,20 @@ package login
 import (
 	"encoding/binary"
 	"io"
+	"net"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/elastic/beats/v7/auditbeat/core"
 	"github.com/elastic/beats/v7/libbeat/paths"
 	mbtest "github.com/elastic/beats/v7/metricbeat/mb/testing"
+	"github.com/elastic/elastic-agent-libs/mapstr"
+	"github.com/stretchr/testify/assert"
 )
 
-func TestWtmp(t *testing.T) {
+func TestData(t *testing.T) {
 	if byteOrder != binary.LittleEndian {
 		t.Skip("Test only work on little-endian system -skipping.")
 	}
@@ -41,13 +45,133 @@ func TestWtmp(t *testing.T) {
 	mbtest.WriteEventToDataJSON(t, fullEvent, "")
 }
 
-func TEstWtmp(t *testing.T) {
+func TestWtmp(t *testing.T) {
 	if byteOrder != binary.LittleEndian {
 		t.Skip("Test only works on little-endian system - skipping.")
 	}
 
 	defer SetupDataDir(t)()
 
+	dir := setupTestDir(t)
+	defer os.RemoveAll(dir)
+
+	wtmpFilepath := filepath.Join(dir, "wtmp")
+	t.Log("wtmpFilepath is:", wtmpFilepath)
+
+	config := getBaseConfig()
+	config["login.wtmp_file_pattern"] = wtmpFilepath
+	config["login.btmp_file_pattern"] = ""
+	f := mbtest.NewReportingMetricSetV2(t, config)
+	defer f.(*MetricSet).utmpReader.bucket.DeleteBucket()
+
+	events, errs := mbtest.ReportingFetchV2(f)
+	if len(errs) > 0 {
+		t.Fatalf("received error: %+v", errs[0])
+	}
+
+	if len(events) == 0 {
+		t.Fatal("no events were generated")
+	} else if len(events) != 1 {
+		t.Fatalf("only one event expected. got %d", len(events))
+	}
+
+	checkFieldValue(t, mapstr.M(events[0].RootFields), "event.kind", "event")
+	checkFieldValue(t, mapstr.M(events[0].RootFields), "event.category", []string{"authentication"})
+	checkFieldValue(t, mapstr.M(events[0].RootFields), "event.type", []string{"start", "authentication_success"})
+	checkFieldValue(t, mapstr.M(events[0].RootFields), "event.action", "user_login")
+	checkFieldValue(t, mapstr.M(events[0].RootFields), "event.outcome", "success")
+	checkFieldValue(t, mapstr.M(events[0].RootFields), "process.pid", 14962)
+	checkFieldValue(t, mapstr.M(events[0].RootFields), "source.ip", "10.0.2.2")
+	checkFieldValue(t, mapstr.M(events[0].RootFields), "user.name", "vagrant")
+	checkFieldValue(t, mapstr.M(events[0].RootFields), "user.terminal", "pts/2")
+	assert.True(t, events[0].Timestamp.Equal(time.Date(2019, 1, 24, 9, 51, 51, 367964000, time.UTC)),
+		"Timestamp is not equal: %+v", events[0].Timestamp)
+
+	// Append logout event to wtmp file and check that it's read
+	wtmpFile, err := os.OpenFile(wtmpFilepath, os.O_APPEND|os.O_WRONLY, 0o644)
+	if err != nil {
+		t.Fatalf("error opening %v: %v", wtmpFilepath, err)
+	}
+
+	wtmpFileInfo, err := os.Stat(wtmpFilepath)
+	if err != nil {
+		t.Fatalf("error performing stat on %v: %v", wtmpFilepath, err)
+	}
+
+	size := wtmpFileInfo.Size()
+
+	loginUtmp := utmpC{
+		Type: DEAD_PROCESS,
+	}
+	copy(loginUtmp.Device[:], "pts/2")
+
+	err = binary.Write(wtmpFile, byteOrder, loginUtmp)
+	if err != nil {
+		t.Fatalf("error writing to %v: %v", wtmpFilepath, err)
+	}
+
+	events, errs = mbtest.ReportingFetchV2(f)
+	if len(errs) > 0 {
+		t.Fatalf("received error: %+v", errs[0])
+	}
+
+	if len(events) == 0 {
+		t.Fatal("no events were genrated")
+	}else if len(events) != 1 {
+		t.Fatalf("only one event expected, got %d: %v", len(events), events)
+	}
+
+	checkFieldValue(t, mapstr.M(events[0].RootFields), "event.kind", "event")
+	checkFieldValue(t, mapstr.M(events[0].RootFields), "event.category", []string{"authentication"})
+	checkFieldValue(t, mapstr.M(events[0].RootFields), "event.type", []string{"end"})
+	checkFieldValue(t, mapstr.M(events[0].RootFields), "event.action", "user_logout")
+	checkFieldValue(t, mapstr.M(events[0].RootFields), "process.pid", 14962)
+	checkFieldValue(t, mapstr.M(events[0].RootFields), "source.ip", "10.0.2.2")
+	checkFieldValue(t, mapstr.M(events[0].RootFields), "related.ip", []string{"10.0.2.2"})
+	checkFieldValue(t, mapstr.M(events[0].RootFields), "user.name", "vagrant")
+	checkFieldValue(t, mapstr.M(events[0].RootFields), "related.user", []string{"vagrant"})
+	checkFieldValue(t, mapstr.M(events[0].RootFields), "user.terminal", "pts/2")
+
+	// We truncate to the previous size to force a full re-read, simulating an inode reuse.
+	if err := wtmpFile.Truncate(size); err != nil {
+		t.Fatalf("error truncating %v: %v", wtmpFilepath, err)
+	}
+
+	events, errs = mbtest.ReportingFetchV2(f)
+	if len(errs) > 0 {
+		t.Fatalf("received error: %+v", errs[0])
+	}
+
+	if len(events) == 0 {
+		t.Fatal("no events were generated")
+	} else if len(events) != 1 {
+		t.Fatalf("only one event expected, got %d", len(events))
+	}
+
+	// utmpdump: [7] [14962] [ts/2] [vagrant ] [pts/2       ] [10.0.2.2            ] [10.0.2.2       ] [2019-01-24T09:51:51,367964+00:00]
+	checkFieldValue(t, mapstr.M(events[0].RootFields), "event.kind", "event")
+	checkFieldValue(t, mapstr.M(events[0].RootFields), "event.category", []string{"authentication"})
+	checkFieldValue(t, mapstr.M(events[0].RootFields), "event.type", []string{"start", "authentication_success"})
+	checkFieldValue(t, mapstr.M(events[0].RootFields), "event.action", "user_login")
+	checkFieldValue(t, mapstr.M(events[0].RootFields), "event.outcome", "success")
+	checkFieldValue(t, mapstr.M(events[0].RootFields), "process.pid", 14962)
+	checkFieldValue(t, mapstr.M(events[0].RootFields), "source.ip", "10.0.2.2")
+	checkFieldValue(t, mapstr.M(events[0].RootFields), "user.name", "vagrant")
+	checkFieldValue(t, mapstr.M(events[0].RootFields), "user.terminal", "pts/2")
+	assert.True(t, events[0].Timestamp.Equal(time.Date(2019, 1, 24, 9, 51, 51, 367964000, time.UTC)),
+		"Timestamp is not equal: %+v", events[0].Timestamp)
+}
+
+func checkFieldValue(t *testing.T, mapstr mapstr.M, fieldName string, fieldValue interface{}) {
+	value, err := mapstr.GetValue(fieldName)
+	if assert.NoError(t, err) {
+		switch v := value.(type) {
+		case *net.IP:
+			assert.Equal(t, fieldValue, v.String())
+		default:
+			assert.Equal(t, fieldValue, v)
+		}
+	}
 }
 
 func getBaseConfig() map[string]interface{} {
