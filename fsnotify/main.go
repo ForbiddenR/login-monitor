@@ -29,7 +29,7 @@ func main() {
 			if !ok {
 				return
 			}
-			fmt.Println("ERROR: %s", err)
+			fmt.Printf("ERROR: %s", err)
 		// Read from Events.
 		case e, ok := <-w.Events:
 			if !ok {
