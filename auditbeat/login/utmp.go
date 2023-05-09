@@ -32,7 +32,7 @@ type UtmpType uint8
 
 const (
 	// Wtmp is the "normal" wtmp file that includes successful logins, logouts,
-	// adn system boots.
+	// and system boots.
 	Wtmp UtmpType = iota
 	// Btmp contains bad logins only.
 	Btmp
@@ -66,7 +66,7 @@ func NewUtmpFileReader(log *logp.Logger, bucket datastore.Bucket, config config)
 		loginSessions:  make(map[string]LoginRecord),
 	}
 
-	// Load state (file records, tty mapping) from disk.
+	// Load state (file records, tty mapping) from disk
 	err := r.restoreStateFromDisk()
 	if err != nil {
 		return nil, fmt.Errorf("failed to restore state from disk: %w", err)
@@ -89,7 +89,7 @@ func (r *UtmpFileReader) ReadNew() (<-chan LoginRecord, <-chan error) {
 	errorC := make(chan error)
 
 	go func() {
-		defer logp.Recover("A panic occured while collecting login information")
+		defer logp.Recover("A panic occurred while collecting login information")
 		defer close(loginRecordC)
 		defer close(errorC)
 
@@ -122,7 +122,7 @@ func (r *UtmpFileReader) findFiles(filePattern string, utmpType UtmpType) ([]Utm
 		return nil, fmt.Errorf("failed to expand file pattern %v: %w", filePattern, err)
 	}
 
-	// Sort paths in reverse order (oldest/most-rorated file first)
+	// Sort paths in reverse order (oldest/most-rotated file first)
 	sort.Sort(sort.Reverse(sort.StringSlice(paths)))
 
 	var utmpFiles []UtmpFile
@@ -164,7 +164,7 @@ func (r *UtmpFileReader) deleteOldUtmpFiles(existingFiles *[]UtmpFile) {
 	}
 }
 
-// readNewInFile reads a UTMP formatted file and emits the records after the last know record.
+// readNewInFile reads a UTMP formatted file and emits the records after the last known record.
 func (r *UtmpFileReader) readNewInFile(loginRecordC chan<- LoginRecord, errorC chan<- error, utmpFile UtmpFile) {
 	savedUtmpFile, isKnownFile := r.savedUtmpFiles[utmpFile.Inode]
 	if !isKnownFile {
@@ -175,12 +175,12 @@ func (r *UtmpFileReader) readNewInFile(loginRecordC chan<- LoginRecord, errorC c
 	size := utmpFile.Size
 	oldSize := savedUtmpFile.Size
 	if size < oldSize || utmpFile.Offset > size {
-		// UTMP files are append-only and so this is weired. It might be a sign of
+		// UTMP files are append-only and so this is weird. It might be a sign of
 		// a highly unlikely inode reuse - or of something more nefarious.
 		// Setting isKnownFile to false so we read the whole file from the beginning.
 		isKnownFile = false
 
-		r.log.Warnf("saved size of offset illogical (new=%+v, saved=%+v) - reading whole file.",
+		r.log.Warnf("saved size or offset illogical (new=%+v, saved=%+v) - reading whole file.",
 			utmpFile, savedUtmpFile)
 	}
 
@@ -213,7 +213,7 @@ func (r *UtmpFileReader) readNewInFile(loginRecordC chan<- LoginRecord, errorC c
 		}()
 
 		// This will be the usual case, but we do not want to seek with the stored offset
-		// if the saved is smaler than the current one.
+		// if the saved size is smaller than the current one.
 		if size >= oldSize && utmpFile.Offset <= size {
 			_, err = f.Seek(utmpFile.Offset, 0)
 			if err != nil {
@@ -241,7 +241,7 @@ func (r *UtmpFileReader) readNewInFile(loginRecordC chan<- LoginRecord, errorC c
 			}
 
 			if utmp != nil {
-				r.log.Debugf("utmp: (ut_type=%d, ut_pid=%d, ut_line=%v, ut_user=%v, ut_host=%v, ut_tv.tv_set=%v, ut_addr_v6=%v)",
+				r.log.Debugf("utmp: (ut_type=%d, ut_pid=%d, ut_line=%v, ut_user=%v, ut_host=%v, ut_tv.tv_sec=%v, ut_addr_v6=%v)",
 					utmp.UtType, utmp.UtPid, utmp.UtLine, utmp.UtUser, utmp.UtHost, utmp.UtTv, utmp.UtAddrV6)
 
 				var loginRecord *LoginRecord
@@ -295,7 +295,7 @@ func (r *UtmpFileReader) processBadLoginRecord(utmp *Utmp) (*LoginRecord, error)
 	}
 
 	switch utmp.UtType {
-	// See utmp(5) for C constans.
+	// See utmp(5) for C constants.
 	case LOGIN_PROCESS, USER_PROCESS:
 		record.Type = userLoginFailedRecord
 
@@ -305,7 +305,7 @@ func (r *UtmpFileReader) processBadLoginRecord(utmp *Utmp) (*LoginRecord, error)
 		record.IP = newIP(utmp.UtAddrV6)
 		record.Hostname = utmp.UtHost
 	default:
-		// This shoud not happen.
+		// This should not happen.
 		return nil, fmt.Errorf("UTMP record with unexpected type %v in bad login file", utmp.UtType)
 	}
 
@@ -314,7 +314,7 @@ func (r *UtmpFileReader) processBadLoginRecord(utmp *Utmp) (*LoginRecord, error)
 
 // processGoodLoginRecord receives UTMP login records in order and returns
 // a corresponding LoginRecord. Some UTMP records do not translate
-// into a LoginRecord, in this case the return values is nil.
+// into a LoginRecord, in this case the return value is nil.
 func (r *UtmpFileReader) processGoodLoginRecord(utmp *Utmp) *LoginRecord {
 	record := LoginRecord{
 		Utmp:      utmp,
@@ -330,7 +330,7 @@ func (r *UtmpFileReader) processGoodLoginRecord(utmp *Utmp) *LoginRecord {
 	switch utmp.UtType {
 	// See utmp(5) for C constants.
 	case RUN_LVL:
-		// The runlevel - though a number -is stored as
+		// The runlevel - though a number - is stored as
 		// the ASCII character of that number.
 		runlevel := string(rune(utmp.UtPid))
 
@@ -368,7 +368,7 @@ func (r *UtmpFileReader) processGoodLoginRecord(utmp *Utmp) *LoginRecord {
 		record.Hostname = utmp.UtHost
 
 		// Store TTY from user login record for enrichment when user logout
-		// record comes along (which, alas, does not contain the username)
+		// record comes along (which, alas, does not contain the username).
 		r.loginSessions[record.TTY] = record
 	case DEAD_PROCESS:
 		savedRecord, found := r.loginSessions[record.TTY]
@@ -389,10 +389,10 @@ func (r *UtmpFileReader) processGoodLoginRecord(utmp *Utmp) *LoginRecord {
 		/*
 			Every other record type is ignored:
 			- EMPTY - empty record
-			- NEW_TIME and OLD_TIME - could be useful, but not written when time changes.
-			at least using `date`
+			- NEW_TIME and OLD_TIME - could be useful, but not written when time changes,
+			at least not using `date`
 			- INIT_PROCESS and LOGIN_PROCESS - written on boot but do not contain any
-			interesting infomation
+			interesting information
 			- ACCOUNTING - not implemented according to manpage
 		*/
 		r.log.Debugf("Ignoring UTMP record of type %v.", utmp.UtType)
@@ -410,7 +410,7 @@ func lookupUsername(username string) int {
 		user, err := user.Lookup(username)
 		if err == nil {
 			uid, err := strconv.Atoi(user.Uid)
-			if err != nil {
+			if err == nil {
 				return uid
 			}
 		}
@@ -446,6 +446,7 @@ func (r *UtmpFileReader) saveStateToDisk() error {
 	if err != nil {
 		return err
 	}
+
 	err = r.saveLoginSessionsToDisk()
 	if err != nil {
 		return err
@@ -464,9 +465,10 @@ func (r *UtmpFileReader) saveFileRecordsToDisk() error {
 			return fmt.Errorf("error encoding UTMP file record: %w", err)
 		}
 	}
+
 	err := r.bucket.Store(bucketKeyFileRecords, buf.Bytes())
 	if err != nil {
-		return fmt.Errorf("error writing UTMP fiel records to disk: %w", err)
+		return fmt.Errorf("error writing UTMP file records to disk: %w", err)
 	}
 
 	r.log.Debugf("Wrote %d UTMP file records to disk", len(r.savedUtmpFiles))
@@ -562,7 +564,7 @@ func (r *UtmpFileReader) restoreLoginSessionsFromDisk() error {
 				// Read all
 				break
 			} else {
-				return fmt.Errorf("error decodng login record: %w", err)
+				return fmt.Errorf("error decoding login record: %w", err)
 			}
 		}
 	}
