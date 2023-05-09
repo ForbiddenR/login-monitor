@@ -10,7 +10,6 @@ import (
 	"github.com/elastic/beats/v7/libbeat/common/cfgwarn"
 	"github.com/elastic/beats/v7/metricbeat/mb"
 	"github.com/elastic/elastic-agent-libs/logp"
-	"github.com/elastic/elastic-agent-libs/mapstr"
 )
 
 const (
@@ -157,16 +156,16 @@ func (ms *MetricSet) readAndEmit(report mb.ReporterV2) int {
 func (ms *MetricSet) loginEvent(loginRecord *LoginRecord) mb.Event {
 	event := mb.Event{
 		Timestamp: loginRecord.Timestamp,
-		RootFields: common.MapStr(mapstr.M{
-			"event": mapstr.M{
+		RootFields: common.MapStr{
+			"event": common.MapStr{
 				"kind":   eventTypeEvent,
 				"action": loginRecord.Type.string(),
 				"origin": loginRecord.Origin,
 			},
 			"message": loginMessage(loginRecord),
 			// Very useful for development
-			// "debug": fmt.Sprintf("%v", login.Utmp),
-		}),
+			// "debug": fmt.Sprintf("%v", loginRecord),
+		},
 	}
 
 	if loginRecord.Username != "" {
