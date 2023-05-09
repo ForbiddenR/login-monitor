@@ -178,7 +178,7 @@ func TestBtmp(t *testing.T) {
 
 	config := getBaseConfig()
 	config["login.wtmp_file_pattern"] = ""
-	config["login.btmp_file_pattern"] = "/var/log/btmp"
+	config["login.btmp_file_pattern"] = "./testdata/btmp*"
 	f := mbtest.NewReportingMetricSetV2(t, config)
 	defer f.(*MetricSet).utmpReader.bucket.DeleteBucket()
 
@@ -189,22 +189,68 @@ func TestBtmp(t *testing.T) {
 
 	if len(events) == 0 {
 		t.Fatal("no events were generated")
+	} else if len(events) != 4 {
+		t.Fatalf("expected 4 events, got %d", len(events))
 	}
-	// else if len(events) != 4 {
-	// 	t.Fatalf("expected 4 events, got %d", len(events))
-	// }
-	i := 0
-	for _, event := range events {
-		by, err := json.Marshal(event.RootFields)
-		if err != nil {
-			t.Fatal(err)
-		}
-		t.Log(string(by), event.Timestamp)
-		if i == 20 {
-			break
-		}
-		// i++
+
+	// utmpdump: [6] [03307] [    ] [root    ] [ssh:notty   ] [10.0.2.2            ] [10.0.2.2       ] [2019-02-20T17:42:26,000000+0000]
+	checkFieldValue(t, events[0].RootFields, "event.kind", "event")
+	checkFieldValue(t, events[0].RootFields, "event.category", []string{"authentication"})
+	checkFieldValue(t, events[0].RootFields, "event.type", []string{"start", "authentication_failure"})
+	checkFieldValue(t, events[0].RootFields, "event.action", "user_login")
+	checkFieldValue(t, events[0].RootFields, "event.outcome", "failure")
+	checkFieldValue(t, events[0].RootFields, "process.pid", 3307)
+	checkFieldValue(t, events[0].RootFields, "source.ip", "10.0.2.2")
+	checkFieldValue(t, events[0].RootFields, "user.id", 0)
+	checkFieldValue(t, events[0].RootFields, "user.name", "root")
+	checkFieldValue(t, events[0].RootFields, "user.terminal", "ssh:notty")
+	assert.True(t, events[0].Timestamp.Equal(time.Date(2019, 2, 20, 17, 42, 26, 0, time.UTC)),
+		"Timestamp is not equal: %+v", events[0].Timestamp)
+
+	// The second UTMP entry in the btmp test file is a duplicate of the first, this is what Ubuntu 18.04 generates.
+	// utmpdump: [6] [03307] [    ] [root    ] [ssh:notty   ] [10.0.2.2            ] [10.0.2.2       ] [2019-02-20T17:42:26,000000+0000]
+	checkFieldValue(t, events[1].RootFields, "event.kind", "event")
+	checkFieldValue(t, events[0].RootFields, "event.category", []string{"authentication"})
+	checkFieldValue(t, events[0].RootFields, "event.type", []string{"start", "authentication_failure"})
+	checkFieldValue(t, events[1].RootFields, "event.action", "user_login")
+	checkFieldValue(t, events[1].RootFields, "event.outcome", "failure")
+	checkFieldValue(t, events[1].RootFields, "process.pid", 3307)
+	checkFieldValue(t, events[1].RootFields, "source.ip", "10.0.2.2")
+	checkFieldValue(t, events[1].RootFields, "user.id", 0)
+	checkFieldValue(t, events[1].RootFields, "user.name", "root")
+	checkFieldValue(t, events[1].RootFields, "user.terminal", "ssh:notty")
+	assert.True(t, events[1].Timestamp.Equal(time.Date(2019, 2, 20, 17, 42, 26, 0, time.UTC)),
+		"Timestamp is not equal: %+v", events[1].Timestamp)
+
+	// utmpdump: [7] [03788] [/0  ] [elastic ] [pts/0       ] [                    ] [0.0.0.0        ] [2019-02-20T17:45:08,447344+0000]
+	checkFieldValue(t, events[2].RootFields, "event.kind", "event")
+	checkFieldValue(t, events[0].RootFields, "event.category", []string{"authentication"})
+	checkFieldValue(t, events[0].RootFields, "event.type", []string{"start", "authentication_failure"})
+	checkFieldValue(t, events[2].RootFields, "event.action", "user_login")
+	checkFieldValue(t, events[2].RootFields, "event.outcome", "failure")
+	checkFieldValue(t, events[2].RootFields, "process.pid", 3788)
+	checkFieldValue(t, events[2].RootFields, "source.ip", "0.0.0.0")
+	checkFieldValue(t, events[2].RootFields, "user.name", "elastic")
+	checkFieldValue(t, events[2].RootFields, "user.terminal", "pts/0")
+	assert.True(t, events[2].Timestamp.Equal(time.Date(2019, 2, 20, 17, 45, 8, 447344000, time.UTC)),
+		"Timestamp is not equal: %+v", events[2].Timestamp)
+
+	// utmpdump: [7] [03788] [/0  ] [UNKNOWN ] [pts/0       ] [                    ] [0.0.0.0        ] [2019-02-20T17:45:15,765318+0000]
+	checkFieldValue(t, events[3].RootFields, "event.kind", "event")
+	checkFieldValue(t, events[0].RootFields, "event.category", []string{"authentication"})
+	checkFieldValue(t, events[0].RootFields, "event.type", []string{"start", "authentication_failure"})
+	checkFieldValue(t, events[3].RootFields, "event.action", "user_login")
+	checkFieldValue(t, events[3].RootFields, "event.outcome", "failure")
+	checkFieldValue(t, events[3].RootFields, "process.pid", 3788)
+	checkFieldValue(t, events[3].RootFields, "source.ip", "0.0.0.0")
+	contains, err := events[3].RootFields.HasKey("user.id")
+	if assert.NoError(t, err) {
+		assert.False(t, contains)
 	}
+	checkFieldValue(t, events[3].RootFields, "user.name", "UNKNOWN")
+	checkFieldValue(t, events[3].RootFields, "user.terminal", "pts/0")
+	assert.True(t, events[3].Timestamp.Equal(time.Date(2019, 2, 20, 17, 45, 15, 765318000, time.UTC)),
+		"Timestamp is not equal: %+v", events[3].Timestamp)
 }
 
 func checkFieldValue(t *testing.T, mts common.MapStr, fieldName string, fieldValue interface{}) {
