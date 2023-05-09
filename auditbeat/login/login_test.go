@@ -12,6 +12,7 @@ import (
 
 	"github.com/elastic/beats/v7/libbeat/common"
 	"github.com/elastic/beats/v7/libbeat/paths"
+	abtest "github.com/elastic/beats/v7/auditbeat/testing"
 	mbtest "github.com/elastic/beats/v7/metricbeat/mb/testing"
 	"github.com/stretchr/testify/assert"
 )
@@ -21,7 +22,8 @@ func TestData(t *testing.T) {
 		t.Skip("Test only work on little-endian system -skipping.")
 	}
 
-	defer SetupDataDir(t)()
+	defer abtest.SetupDataDir(t)()
+
 
 	config := getBaseConfig()
 	config["login.wtmp_file_pattern"] = "./testdata/wtmp2"
@@ -59,7 +61,7 @@ func TestWtmp(t *testing.T) {
 		t.Skip("Test only works on little-endian system - skipping.")
 	}
 
-	defer SetupDataDir(t)()
+	defer abtest.SetupDataDir(t)()
 
 	dir := setupTestDir(t)
 	defer os.RemoveAll(dir)
@@ -174,7 +176,7 @@ func TestBtmp(t *testing.T) {
 		t.Skip("Test only works on little-endian systems - skipping.")
 	}
 
-	defer SetupDataDir(t)()
+	defer abtest.SetupDataDir(t)()
 
 	config := getBaseConfig()
 	config["login.wtmp_file_pattern"] = ""
@@ -269,13 +271,4 @@ func copyFile(t *testing.T, src, dst string) {
 	if err != nil {
 		t.Fatalf("failed to copy %v to %v", src, dst)
 	}
-}
-
-func SetupDataDir(t testing.TB) func() {
-	var err error
-	paths.Paths.Data, err = os.MkdirTemp("", "beat-data-dir")
-	if err != nil {
-		t.Fatal()
-	}
-	return func() { os.RemoveAll(paths.Paths.Data) }
 }
