@@ -10,9 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/elastic/beats/v7/libbeat/common"
-	"github.com/elastic/beats/v7/libbeat/paths"
 	abtest "github.com/elastic/beats/v7/auditbeat/testing"
+	"github.com/elastic/beats/v7/libbeat/common"
 	mbtest "github.com/elastic/beats/v7/metricbeat/mb/testing"
 	"github.com/stretchr/testify/assert"
 )
@@ -23,7 +22,6 @@ func TestData(t *testing.T) {
 	}
 
 	defer abtest.SetupDataDir(t)()
-
 
 	config := getBaseConfig()
 	config["login.wtmp_file_pattern"] = "./testdata/wtmp2"
