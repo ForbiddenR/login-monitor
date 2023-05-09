@@ -1,4 +1,4 @@
-package afpacket
+package afpackets
 
 type config struct {
 	// Interface to listen on. Defaults to "any".
