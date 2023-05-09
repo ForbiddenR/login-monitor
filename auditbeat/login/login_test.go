@@ -3,6 +3,7 @@ package login
 import (
 	"encoding/binary"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net"
 	"os"
@@ -24,8 +25,9 @@ func TestData(t *testing.T) {
 	defer abtest.SetupDataDir(t)()
 
 	config := getBaseConfig()
-	config["login.wtmp_file_pattern"] = "./testdata/wtmp2"
-	config["login.btmp_file_pattern"] = ""
+	// config["login.wtmp_file_pattern"] = "./testdata/wtmp2"
+	config["login.wtmp_file_pattern"] = "/var/log/wtmp*"
+	config["login.btmp_file_pattern"] = "/var/log/btmp*"
 	f := mbtest.NewReportingMetricSetV2(t, config)
 	defer f.(*MetricSet).utmpReader.bucket.DeleteBucket()
 
@@ -43,7 +45,7 @@ func TestData(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		t.Log(string(by))
+		fmt.Println(string(by))
 	}
 	// else if len(events) != 1 {
 	// 	t.Fatalf("only one event expected, got %d", len(events))
