@@ -8,7 +8,6 @@ require (
 	github.com/fsnotify/fsnotify v1.6.0
 	github.com/joho/godotenv v1.5.1
 	github.com/nacos-group/nacos-sdk-go/v2 v2.2.1
-	github.com/spf13/cobra v1.7.0
 	github.com/stretchr/testify v1.8.2
 )
 
@@ -30,7 +29,6 @@ require (
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
-	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/joeshaw/multierror v0.0.0-20140124173710-69b34d4ec901 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
@@ -48,7 +46,7 @@ require (
 	github.com/prometheus/common v0.32.1 // indirect
 	github.com/prometheus/procfs v0.7.3 // indirect
 	github.com/santhosh-tekuri/jsonschema v1.2.4 // indirect
-	github.com/spf13/pflag v1.0.5 // indirect
+	github.com/spf13/cobra v1.7.0 // indirect
 	go.elastic.co/apm v1.11.0 // indirect
 	go.elastic.co/ecszap v1.0.1 // indirect
 	go.elastic.co/fastjson v1.1.0 // indirect
