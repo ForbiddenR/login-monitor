@@ -3,8 +3,12 @@ package afpackets
 import (
 	"context"
 	"net"
+	"os"
+	"time"
 
 	parent "github.com/ForbiddenR/login-monitor/auditbeat/socket/dns"
+	"github.com/dustin/go-humanize"
+	"github.com/elastic/beats/v7/metricbeat/mb"
 	"github.com/elastic/elastic-agent-libs/logp"
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/afpacket"
@@ -42,13 +46,54 @@ func init() {
 	// parent.Registry.MustRegister("af_packet", )
 }
 
-// func newAFPacketSniffer(base mb.BaseMetricSet, log *logp.Logger) (parent.Sniffer, error) {
-// 	config := defaultConfig()
-// 	if err := base.Module().UnpackConfig(&config); err != nil {
-// 		return nil, errors.Wrap(err, "failed to unpack af_packet config")
-// 	}
+func newAFPacketSniffer(base mb.BaseMetricSet, log *logp.Logger) (parent.Sniffer, error) {
+	config := defaultConfig()
+	if err := base.Module().UnpackConfig(&config); err != nil {
+		return nil, errors.Wrap(err, "failed to unpack af_packet config")
+	}
 
-// }
+	frameSize, blockSize, numBlocks, err := afpacketComputeSize(8*humanize.MiByte, config.Snaplen, os.Getpagesize())
+	if err != nil {
+		return nil, err
+	}
+
+	opts := []interface{}{
+		afpacket.OptFrameSize(frameSize),
+		afpacket.OptBlockSize(blockSize),
+		afpacket.OptNumBlocks(numBlocks),
+		afpacket.SocketRaw,
+		// Configure a poll timeout so that the capture goroutine
+		// wakes up periodically to check for termination.
+		afpacket.OptPollTimeout(time.Microsecond * 500),
+	}
+
+	if config.Interface != "any" {
+		opts = append(opts, afpacket.OptInterface(config.Interface))
+	}
+
+	tPacket, err := afpacket.NewTPacket(opts...)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed creating af_packet sniffer")
+	}
+
+	if err = tPacket.SetBPF(udpSrcPort53Filter); err != nil {
+		tPacket.Close()
+		return nil, errors.Wrapf(err, "failed setting BPF filter")
+	}
+
+	c := &dnsCapture{
+		tPacket: tPacket,
+		log:     log,
+	}
+
+	return c, nil
+}
+
+// Monitor starts monitoring for DNS transactions in the background.
+func (c *dnsCapture) Monitor(ctx context.Context, consumer parent.Consumer) error {
+	go c.run(ctx, consumer)
+	return nil
+}
 
 var (
 	errNotIP  = errors.New("network is not IP")
