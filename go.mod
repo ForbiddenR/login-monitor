@@ -15,6 +15,8 @@ require (
 	golang.org/x/net v0.10.0
 )
 
+require github.com/elastic/go-perf v0.0.0-20191212140718-9c656876f595 // indirect
+
 require (
 	github.com/Microsoft/go-winio v0.5.2 // indirect
 	github.com/aliyun/alibaba-cloud-sdk-go v1.61.1704 // indirect
@@ -35,7 +37,7 @@ require (
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
-	github.com/joeshaw/multierror v0.0.0-20140124173710-69b34d4ec901 // indirect
+	github.com/joeshaw/multierror v0.0.0-20140124173710-69b34d4ec901
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/magefile/mage v1.14.0 // indirect
 	github.com/mattn/go-colorable v0.1.12 // indirect
@@ -60,7 +62,7 @@ require (
 	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519 // indirect
 	golang.org/x/mod v0.8.0 // indirect
 	golang.org/x/sync v0.1.0 // indirect
-	golang.org/x/sys v0.8.0 // indirect
+	golang.org/x/sys v0.8.0
 	golang.org/x/text v0.9.0 // indirect
 	golang.org/x/time v0.0.0-20220722155302-e5dcc9cfc0b9 // indirect
 	golang.org/x/tools v0.6.0 // indirect
