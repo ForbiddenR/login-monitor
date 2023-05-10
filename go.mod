@@ -6,10 +6,13 @@ require (
 	github.com/elastic/beats/v7 v7.17.10
 	github.com/elastic/elastic-agent-libs v0.3.8
 	github.com/fsnotify/fsnotify v1.6.0
+	github.com/google/gopacket v1.1.19
 	github.com/joho/godotenv v1.5.1
+	github.com/miekg/dns v1.1.54
 	github.com/nacos-group/nacos-sdk-go/v2 v2.2.1
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.8.2
+	golang.org/x/net v0.10.0
 )
 
 require (
@@ -28,7 +31,6 @@ require (
 	github.com/gofrs/uuid v4.2.0+incompatible // indirect
 	github.com/golang/mock v1.6.0 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
-	github.com/google/gopacket v1.1.19
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
@@ -55,11 +57,12 @@ require (
 	go.uber.org/multierr v1.8.0 // indirect
 	go.uber.org/zap v1.21.0 // indirect
 	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519 // indirect
-	golang.org/x/net v0.10.0
-	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4 // indirect
+	golang.org/x/mod v0.8.0 // indirect
+	golang.org/x/sync v0.1.0 // indirect
 	golang.org/x/sys v0.8.0 // indirect
 	golang.org/x/text v0.9.0 // indirect
 	golang.org/x/time v0.0.0-20220722155302-e5dcc9cfc0b9 // indirect
+	golang.org/x/tools v0.6.0 // indirect
 	google.golang.org/genproto v0.0.0-20220426171045-31bebdecfb46 // indirect
 	google.golang.org/grpc v1.48.0 // indirect
 	google.golang.org/protobuf v1.28.0 // indirect
