@@ -27,7 +27,7 @@ func TestData(t *testing.T) {
 	config := getBaseConfig()
 	// config["login.wtmp_file_pattern"] = "./testdata/wtmp2"
 	config["login.wtmp_file_pattern"] = "/var/log/wtmp*"
-	config["login.btmp_file_pattern"] = "/var/log/btmp*"
+	config["login.btmp_file_pattern"] = ""
 	f := mbtest.NewReportingMetricSetV2(t, config)
 	defer f.(*MetricSet).utmpReader.bucket.DeleteBucket()
 

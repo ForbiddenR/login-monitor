@@ -155,6 +155,8 @@ func New(base mb.BaseMetricSet) (mb.MetricSet, error) {
 		return nil, err
 	}
 
+	// log := logp.NewLogger(metricsetName)
+	
 	ms := &MetricSet{
 		SystemMetricSet: system.NewSystemMetricSet(base),
 		config:          config,
