@@ -10,18 +10,19 @@ import (
 	"time"
 
 	"github.com/cespare/xxhash/v2"
+	"github.com/gofrs/uuid"
+	"github.com/pkg/errors"
+
 	"github.com/elastic/beats/v7/auditbeat/datastore"
 	"github.com/elastic/beats/v7/auditbeat/helper/hasher"
 	"github.com/elastic/beats/v7/libbeat/common"
 	"github.com/elastic/beats/v7/libbeat/common/cfgwarn"
+	"github.com/elastic/beats/v7/libbeat/logp"
 	"github.com/elastic/beats/v7/metricbeat/mb"
 	"github.com/elastic/beats/v7/x-pack/auditbeat/cache"
 	"github.com/elastic/beats/v7/x-pack/auditbeat/module/system"
-	"github.com/elastic/elastic-agent-libs/logp"
 	"github.com/elastic/go-sysinfo"
 	"github.com/elastic/go-sysinfo/types"
-	"github.com/gofrs/uuid"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -30,7 +31,7 @@ const (
 	namespace     = "system.audit.process"
 
 	bucketName              = "auditbeat.process.v1"
-	bucketKeyStateTimestamp = "state_tmestamp"
+	bucketKeyStateTimestamp = "state_timestamp"
 
 	eventTypeState = "state"
 	eventTypeEvent = "event"
@@ -76,7 +77,10 @@ func (action eventAction) Type() string {
 }
 
 func init() {
-	// mb.Registry.MustAddMetricSet(moduleName, metricsetName, New, )
+	mb.Registry.MustAddMetricSet(moduleName, metricsetName, New,
+		mb.DefaultMetricSet(),
+		mb.WithNamespace(namespace),
+	)
 }
 
 // MetricSet collects data about the host.
@@ -155,6 +159,7 @@ func New(base mb.BaseMetricSet) (mb.MetricSet, error) {
 		SystemMetricSet: system.NewSystemMetricSet(base),
 		config:          config,
 		log:             logp.NewLogger(metricsetName),
+		cache:           cache.New(),
 		bucket:          bucket,
 		hasher:          hasher,
 	}
@@ -175,7 +180,7 @@ func New(base mb.BaseMetricSet) (mb.MetricSet, error) {
 		ms.log.Debug("No state timestamp found")
 	}
 
-	if runtime.GOOS != "windows" && os.Getegid() != 0 {
+	if runtime.GOOS != "windows" && os.Geteuid() != 0 {
 		ms.log.Warn("Running as non-root user, will likely not report all processes.")
 	}
 
@@ -210,7 +215,7 @@ func (ms *MetricSet) Fetch(report mb.ReporterV2) {
 	}
 }
 
-// reportState reportes all running processes on the sytem.
+// reportState reports all running processes on the system.
 func (ms *MetricSet) reportState(report mb.ReporterV2) error {
 	// Only update lastState if this state update was regularly scheduled,
 	// i.e. not caused by an Auditbeat restart (when the cache would be empty).
@@ -222,7 +227,7 @@ func (ms *MetricSet) reportState(report mb.ReporterV2) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to get process infos")
 	}
-	ms.log.Debugf("Found  %v processes", len(processes))
+	ms.log.Debugf("Found %v processes", len(processes))
 
 	stateID, err := uuid.NewV4()
 	if err != nil {
@@ -296,7 +301,7 @@ func (ms *MetricSet) reportChanges(report mb.ReporterV2) error {
 // and executable file hash.
 func (ms *MetricSet) enrichProcess(process *Process) {
 	if process.UserInfo != nil {
-		goUser, err := user.LookupId(process.User.Uid)
+		goUser, err := user.LookupId(process.UserInfo.UID)
 		if err == nil {
 			process.User = goUser
 		}
@@ -393,7 +398,7 @@ func processMessage(process *Process, action eventAction) string {
 	case eventActionProcessStopped:
 		actionString = "STOPPED"
 	case eventActionExistingProcess:
-		actionString = "is RUNNINg"
+		actionString = "is RUNNING"
 	}
 
 	var userString string
@@ -469,7 +474,7 @@ func (ms *MetricSet) getProcesses() ([]*Process, error) {
 			process.UserInfo = &userInfo
 		}
 
-		// Exclude Linux kernel process, they are not very interesting.
+		// Exclude Linux kernel processes, they are not very interesting.
 		if runtime.GOOS == "linux" && userInfo.UID == "0" && process.Info.Exe == "" {
 			continue
 		}
