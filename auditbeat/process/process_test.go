@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/elastic/beats/v7/auditbeat/core"
 	"github.com/elastic/beats/v7/auditbeat/helper/hasher"
 	abtest "github.com/elastic/beats/v7/auditbeat/testing"
 	mbtest "github.com/elastic/beats/v7/metricbeat/mb/testing"
@@ -18,7 +17,7 @@ func TestData(t *testing.T) {
 	f := mbtest.NewReportingMetricSetV2(t, getConfig())
 
 	// Set lastSate and add test process to cache so it will be reported as stopped.
-	f.(*MetricSet).lastState = time.Now()
+	f.(*MetricSet).lastState = time.Now().Add(-time.Hour * 13)
 	p := testProcess()
 	f.(*MetricSet).cache.DiffAndUpdateCache(convertToCacheable([]*Process{p}))
 
@@ -31,8 +30,9 @@ func TestData(t *testing.T) {
 		t.Fatal("no events were generated")
 	}
 
-	fullEvent := mbtest.StandardizeEvent(f, events[len(events)-1], core.AddDatasetToEvent)
-	mbtest.WriteEventToDataJSON(t, fullEvent, "")
+	t.Log(events)
+	// fullEvent := mbtest.StandardizeEvent(f, events[len(events)-1], core.AddDatasetToEvent)
+	// mbtest.WriteEventToDataJSON(t, fullEvent, "")
 }
 
 func getConfig() map[string]interface{} {

@@ -10,6 +10,8 @@ import (
 	"github.com/elastic/beats/v7/libbeat/common/cfgwarn"
 	"github.com/elastic/beats/v7/metricbeat/mb"
 	"github.com/elastic/elastic-agent-libs/logp"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 const (
@@ -96,10 +98,17 @@ func New(base mb.BaseMetricSet) (mb.MetricSet, error) {
 		return nil, fmt.Errorf("failed to open persistent datastore: %w", err)
 	}
 
+	core, err := zap.NewDevelopment()
+	if err != nil {
+		return nil, err
+	}
+
 	ms := &MetricSet{
 		BaseMetricSet: base,
 		config:        config,
-		log:           logp.NewLogger(metricsetName),
+		log: logp.NewLogger(metricsetName, zap.WrapCore(func(c zapcore.Core) zapcore.Core {
+			return zapcore.NewTee(c, core.Core())
+		})),
 	}
 
 	ms.utmpReader, err = NewUtmpFileReader(ms.log, bucket, config)
