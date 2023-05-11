@@ -12,6 +12,8 @@ import (
 	"github.com/cespare/xxhash/v2"
 	"github.com/gofrs/uuid"
 	"github.com/pkg/errors"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 
 	"github.com/elastic/beats/v7/auditbeat/datastore"
 	"github.com/elastic/beats/v7/auditbeat/helper/hasher"
@@ -155,15 +157,20 @@ func New(base mb.BaseMetricSet) (mb.MetricSet, error) {
 		return nil, err
 	}
 
-	// log := logp.NewLogger(metricsetName)
-	
+	core, err := zap.NewDevelopment()
+	if err != nil {
+		return nil, err
+	}
+
 	ms := &MetricSet{
 		SystemMetricSet: system.NewSystemMetricSet(base),
 		config:          config,
-		log:             logp.NewLogger(metricsetName),
-		cache:           cache.New(),
-		bucket:          bucket,
-		hasher:          hasher,
+		log: logp.NewLogger(metricsetName, zap.WrapCore(func(c zapcore.Core) zapcore.Core {
+			return zapcore.NewTee(c, core.Core())
+		})),
+		cache:  cache.New(),
+		bucket: bucket,
+		hasher: hasher,
 	}
 
 	// Load from disk: Time when state was last sent
