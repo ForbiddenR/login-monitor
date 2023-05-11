@@ -55,7 +55,7 @@ func testProcess() *Process {
 			CWD:       "/home/elastic",
 			Exe:       "/bin/zsh",
 			Args:      []string{"zsh"},
-			StartTime: time.Date(2019, 1, 1, 0, 0, 1, 0, time.UTC),
+			StartTime: time.Date(2020, 1, 1, 0, 0, 1, 0, time.UTC),
 		},
 		UserInfo: &types.UserInfo{
 			UID:  "1000",
