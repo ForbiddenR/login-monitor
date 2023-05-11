@@ -7,7 +7,6 @@ require (
 	github.com/elastic/elastic-agent-libs v0.3.8
 	github.com/fsnotify/fsnotify v1.6.0
 	github.com/google/gopacket v1.1.19
-	github.com/joho/godotenv v1.5.1
 	github.com/miekg/dns v1.1.54
 	github.com/nacos-group/nacos-sdk-go/v2 v2.2.1
 	github.com/pkg/errors v0.9.1
