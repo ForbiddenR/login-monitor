@@ -87,7 +87,7 @@ func randomLocalIP() [4]byte {
 func getListField(m common.MapStr, key string) ([]int, error) {
 	iface, ok := m[key]
 	if !ok {
-		return nil ,fmt.Errorf("field %s not found", key)
+		return nil, fmt.Errorf("field %s not found", key)
 	}
 	list, ok := iface.([]int)
 	if !ok {
@@ -99,37 +99,97 @@ func getListField(m common.MapStr, key string) ([]int, error) {
 	return list, nil
 }
 
-// // consolidate takes a list of guess result in the form of maps with []int
-// // values, and returns a map where for each key the value is an []int with
-// // the values that appeared in all the guesses.
-// //
-// // Example
-// // Input: [ {"A": [1, 2, 3, 4], "B": [4, 5]}, {"A": [2, 3, 8], "B": [6]} ]
-// // Output: { "A": [2, 3], "B": [] }
-// func consolidate(partials []common.MapStr) (result common.MapStr, err error) {
-// 	if len(partials) == 0 {
-// 		return nil, errors.New("empty resultset to consolidate")
-// 	}
-// 	result = make(common.MapStr)
+// consolidate takes a list of guess result in the form of maps with []int
+// values, and returns a map where for each key the value is an []int with
+// the values that appeared in all the guesses.
+//
+// Example
+// Input: [ {"A": [1, 2, 3, 4], "B": [4, 5]}, {"A": [2, 3, 8], "B": [6]} ]
+// Output: { "A": [2, 3], "B": [] }
+func consolidate(partials []common.MapStr) (result common.MapStr, err error) {
+	if len(partials) == 0 {
+		return nil, errors.New("empty resultset to consolidate")
+	}
+	result = make(common.MapStr)
 
-// 	for k, v := range partials[0] {
-// 		baseList, ok := v.([]int)
-// 		if !ok {
-// 			return nil, fmt.Errorf("consolidating key '%s' is not a list", k)
-// 		}
-// 		for idx := 1; idx < len(partials); idx++ {
-// 			v, found := partials[idx][k]
-// 			if !found {
-// 				return nil, fmt.Errorf("consolidating key '%s' missing in some results", k)
-// 			}
-// 			list, ok := v.([]int)
-// 			if !ok {
-// 				return nil, fmt.Errorf("consolidating key '%s' is not always a list", k)
-// 			}
-// 			var newList []int
-// 			for _, num := range baseList {
-// 				for _, nn := range list 
-// 			}
-// 		}
-// 	}
-// }
+	for k, v := range partials[0] {
+		baseList, ok := v.([]int)
+		if !ok {
+			return nil, fmt.Errorf("consolidating key '%s' is not a list", k)
+		}
+		for idx := 1; idx < len(partials); idx++ {
+			v, found := partials[idx][k]
+			if !found {
+				return nil, fmt.Errorf("consolidating key '%s' missing in some results", k)
+			}
+			list, ok := v.([]int)
+			if !ok {
+				return nil, fmt.Errorf("consolidating key '%s' is not always a list", k)
+			}
+			var newList []int
+			for _, num := range baseList {
+				for _, nn := range list {
+					if num == nn {
+						newList = append(newList, num)
+						break
+					}
+				}
+			}
+			baseList = newList
+			if len(baseList) == 0 {
+				break
+			}
+		}
+		result[k] = baseList
+	}
+	return result, nil
+}
+
+type inetClientServer struct {
+	client, server, accepted int
+	cliAddr                  unix.SockaddrInet4
+	srvAddr                  unix.SockaddrInet4
+}
+
+// SetupTCP sets up a TCP client-server connection.
+func (cs *inetClientServer) SetupTCP() (err error) {
+	if cs.server, cs.srvAddr, err = createSocket(unix.SockaddrInet4{Addr: randomLocalIP()}); err != nil {
+		return err
+	}
+	if err = unix.Listen(cs.server, 1); err != nil {
+		return err
+	}
+	if cs.client, cs.cliAddr, err = createSocket(unix.SockaddrInet4{Addr: randomLocalIP()}); err != nil {
+		return err
+	}
+	if err = unix.Connect(cs.client, &cs.srvAddr); err != nil {
+		return err
+	}
+	if cs.accepted, _, err = unix.Accept(cs.server); err != nil {
+		return err
+	}
+	return nil
+}
+
+// SetupUDP sets up a UDP client-server connection.
+func (cs *inetClientServer) SetupUDP() (err error) {
+	cs.accepted = -1
+	cs.server, cs.srvAddr, err = createSocketWithProto(unix.SOCK_DGRAM, unix.SockaddrInet4{Addr: randomLocalIP()})
+	if err != nil {
+		return err
+	}
+	if cs.client, cs.cliAddr, err = createSocketWithProto(unix.SOCK_DGRAM, unix.SockaddrInet4{Addr: randomLocalIP()}); err != nil {
+		return
+	}
+	return nil
+}
+
+// Cleanup closes the sockets.
+func (cs *inetClientServer) Cleanup() error {
+	if cs.accepted != -1 {
+		unix.Close(cs.accepted)
+	}
+	unix.Close(cs.server)
+	unix.Close(cs.client)
+	return nil
+}
